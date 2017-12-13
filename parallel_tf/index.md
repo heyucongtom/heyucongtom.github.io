@@ -1,10 +1,10 @@
-## Parallel Tensorflow
+# Parallel Tensorflow
 
 This guide is intended as a in-depth guide on synchronized/asynchronized/custom synchronization for Tensorflow networks. The target audience is students and researchers who need to set up a fine-grained, controlled distributed Tensorflow environment. 
 
 The motivation for this article is that Tensorflow is using a synchronization implementation which focuses more on stability and efficiency, and as a result becomes less controlable. 
 
-# Example 1: Synchronous SGD
+## Example 1: Synchronous SGD
 
 We start our discussion on synchronous training. Ideally, the synchronized sgd seeks to compute the sgd (Figure 1) via data parallelism. 
 ![Alt text](./sgd.png?raw=true "Figure 1")
@@ -12,9 +12,24 @@ We start our discussion on synchronous training. Ideally, the synchronized sgd s
 Since it only distributes the data and averaging them for every batch of data, we expect to get exactly the same result for any number of workers, which looks like:
 ![Alt text](./sync_mnist.png?raw=true "Figure 1")
 
-The official guide is vague on such setups and usages. In the following excerpt of codes, I emphasizes how we implement the key points which controls the behavior of our distributed training session. (Different from the official guide I didn't use the make_session_run_hook. As in some issues [link](https://github.com/tensorflow/tensorflow/issues/7970) described there's some race condition associated with it.)
+The official guide is vague on such setups and usages. In most of the settings, we could get somehow synchronized training, but we couldn't get the same results for arbitrary workers - or even worse, the results is non-repeatable even if we are running the same code and fixing the same random seed. Such characteristics are caused by the distributed protocol of Tensorflow, and in this tutorial we will try to build a controlled environment, such that our result will be fully repeatable.
+
+In the following excerpt of codes, I emphasizes how we implement the key points which controls the behavior of our distributed training session. (Different from the official guide I didn't use the make_session_run_hook. As in some [issues](https://github.com/tensorflow/tensorflow/issues/7970) described there's some race condition associated with it.)
 
 ```
+
+############ KEY PART 0 #################
+# Fix random seeds. In order to repeat, #
+# We need to fix three of them          #
+# before we do anything related.        #
+#########################################
+import random
+# Fix random seed to produce exactly the same results.
+random.seed(0)
+tf.set_random_seed(0)
+np.random.seed(0)
+############### END 0 ###################
+
 def worker_train_func(job_name, task_index):
   cluster = ...
   server = tf.train.Server(cluster, job_name=job_name, task_index=task_index)
@@ -84,9 +99,13 @@ def worker_train_func(job_name, task_index):
     ################## END 2 ###################
 
     while not sv.should_stop():
+
+      ########### KEY PART 3 ############
+      #    Shuffle need to be False.    #
+      ###################################
       batch_xs, batch_ys = mnist.train.next_batch(FLAGS.batch_size, shuffle=False)
 
-      ############ KEY PART 3 ############
+      ############ KEY PART 4 ############
       # Assign corresponding portions    #
       # to each thread.                  #
       ####################################
@@ -99,13 +118,13 @@ def worker_train_func(job_name, task_index):
         batch_xs = batch_xs[start_index:end_index]
         batch_ys = batch_ys[start_index:end_index]
 
-      ############# END 3 #################
+      ############# END 4 #################
 
       
       train_feed = {x: batch_xs, y_: batch_ys}
       _ = sess.run([train_op], feed_dict=train_feed)
 
-      ############## KEY PART 4 ###############
+      ############## KEY PART 5 ###############
       # A barrier is required so that         #
       # all the threads are on the same page. #
       #########################################
@@ -115,7 +134,7 @@ def worker_train_func(job_name, task_index):
 
       barrier.wait()
 
-      ############## END 4 ##########
+      ############## END 5 ##########
 
 ```
 
