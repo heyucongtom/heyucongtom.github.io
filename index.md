@@ -1,4 +1,4 @@
-## Welcome to GitHub Pages
+## Welcome to Yucong's page.
 
-[link](./parallel_tf/index.md)
+[Tensorflow sync/async/custom sync Training Guide](./parallel_tf/index.md)
 
