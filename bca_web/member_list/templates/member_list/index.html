@@ -1,0 +1,20 @@
+
+<body>
+This is bca current members
+{% if members %}
+	
+	{% for m in members %}
+	<ul>
+		<li> {{ m.member_name }} </li>
+		<ul> 
+		    <li> Graduation year: {{ m.graduate_year }}</li>
+		</ul>
+	</ul>
+	{% endfor %}
+	
+{% else %}
+	<p> No members are here. </p>
+{% endif %}
+
+<a href="{% url 'main_index:index' %}"> Return </a>
+</body>

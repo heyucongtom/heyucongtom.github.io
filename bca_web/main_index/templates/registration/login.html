@@ -1,0 +1,13 @@
+<!-- templates/registration/login.html -->
+{% if user.is_authenticated %}
+<h2>You already log in.</h2>
+<a href="{% url 'main_index:index' %}">Return</a>
+{% else %}
+<h2>Login</h2>
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Login</button>
+</form>
+{% endif %}
+

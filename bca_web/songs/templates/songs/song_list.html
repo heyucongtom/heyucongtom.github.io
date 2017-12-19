@@ -1,0 +1,19 @@
+{% load static %}
+<body>
+This is bca current songs
+<br>
+
+{% for s in object_list %}
+	<ul>
+		<ul> 
+		    <li> Song name: {{ s.song_name }} <br>
+		    <a href="{% url 'songs:edit' s.id %}">  **EDIT**  </a>	||----||
+		   	<a href="{% url 'songs:delete' s.id %}">  **DELETE**  </a></li>
+		    <li> Other attributes.. (e.g: Author)</li>
+		</ul>
+	</ul>
+{% empty %}
+	<p> No songs are here. </p>
+{% endfor %}
+<a href="{% url 'main_index:index' %}"> Return </a>
+</body>
