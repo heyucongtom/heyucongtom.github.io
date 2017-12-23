@@ -1,8 +1,8 @@
 # Parallel Tensorflow
 
-This guide is intended as a in-depth guide on synchronized/asynchronized/custom synchronization for Tensorflow networks. The target audience is students and researchers who need to set up a fine-grained, controlled distributed Tensorflow environment. 
+This guide is intended as a in-depth guide on synchronized/asynchronized/custom training examples for Tensorflow networks. The target audience is students and researchers who need to set up a fine-grained, controlled distributed Tensorflow environment. 
 
-The motivation for this article is that Tensorflow is using a synchronization implementation which focuses more on stability and efficiency, and as a result becomes less controlable. 
+As we may notice, Tensorflow is using a synchronization protocol implementation which focuses more on stability and efficiency, and as a result becomes less controlable. The motivation for this article is then to discover those points that we may want to tweak in order to produce a fully controllable training environment.
 
 ## Example 1: Synchronous SGD
 
@@ -160,15 +160,17 @@ def worker_train_func(job_name, task_index):
 Async SGD is relatively easier to implement than sync sgd. It is faster too since we don't have to wait for all nodes to response. Usually it also demonstrates faster convergence than sync-SGD. However, since it goes to different gradient direction simultaneously, which directions cancel out, it usually fails to reach optimal results as synchronized version does, falling short of 1~2% of training accuracy on some network.
 
 (Examplify: async training failed to converge to the performance level of sync training.)
+
 ![Alt text](./convergence_depth.png?raw=true "Title")
 
 However, on networks with relatively simpler structure (which sometimes means there's less local minimum to trap the gradient descent, although not usually true), both asyn and async converges to the same performance.
+
 ![Alt text](./async_sync_group_conv.png?raw=true "Title")
 
 Different from the synchronized setting, now we don't need to ensure simultaneous&sync updates for each batch. Refer to the code snippet before, we could remove the SyncReplicaOptimizer and then we get the asynchronized training model.
 
 ## Example 3: Process Group Training.
-An attempt we made is mixing sync and async training model at the same time. According to a recent paper that Intel has published(https://arxiv.org/abs/1708.05256), the hybrid model would gain performance boost which is attributed from sync training, and speed boost which is attributed from async training.
+An attempt we made is mixing sync and async training model at the same time. According to a recent [paper](https://arxiv.org/abs/1708.05256) that Intel has published, the hybrid model would gain performance boost which is attributed from sync training, and speed boost which is attributed from async training.
 
 (The hybrid model. Workers synchronize update on local parameter server, and local parameter servers send them to the central server.)
 ![Alt text](./hybrid.png?raw=true "Title")
@@ -183,6 +185,7 @@ with tf.device("/job:ps/task:%d/cpu:0" % (local_ps_id, gpu_idx)):
 ```
 
 3. Construct sync update procedure on each worker groups. Then, define some update operations, using the original optimizer to apply_gradients to the central ps asynchronously. (instead of using the sync one, since the sync one requires #num_workers updates and average them - it is not designed for individual updates anyway.)
+
 ```
 def apply_gradient_to_ps(ps_server_id, average_grads, opt):
     server_vars = tf.get_collection(scope='ps_{0}'.format(ps_server_id),key=tf.GraphKeys.TRAINABLE_VARIABLES)
@@ -220,9 +223,11 @@ def train(....):
     assign_to_ps_op = apply_gradient_to_ps(ps_server_id, processed_grads, opt)
     fetch_ps_op = update_var(ps_task_id, ps_server_id)
 ```
+
 4. Initialization. For each group we need a chief! The Tensorflow documentation says that we could only define one chief because the chief will initialize all variables, but in our setting NONE of the workers could see all variables, and thus we need to initialize the variables separately on each process group. (In the example Github code, I set 4 processes, with workers [0,2] as group 1, workers [1,3] as group 2, and worker [0,1] as chief for supervisor. )
 
 How does this perform? Well, refer to this early picture above, we could see that it has approximately the same performance as in the MNIST setting for synchronized training. This is definitely a good news, provided that this method requires less synchronization, which indicates higher efficiency.
+
 ![Alt text](./async_sync_group_conv.png?raw=true "Title")
 
 This setup serves as an example on custom network training architecture using Tensorflow. There's still a lots of potential from customizing the training architecture, and associates/manages it via Kubernetes or similar cluster managers.
@@ -230,10 +235,6 @@ This setup serves as an example on custom network training architecture using Te
 A possible next step for the research is to get a 4-GPU setting and experiment this method on Cifar-10, Cifar-100, or some bigger network with some famous architecture. 
 
 
-PS:
-Github Code page:
-https://github.com/amirgholami/parallel_tf
-This software has been developed and is maintained by the PALLAS group
-at the ASPIRE Lab in the University of California, Berkeley.
-More information please visit: 
-http://aspire.eecs.berkeley.edu
+### PS:
+1. Github Code page: https://github.com/amirgholami/parallel_tf
+2. This software has been developed and is maintained by the PALLAS group at the ASPIRE Lab in the University of California, Berkeley. More information please visit: http://aspire.eecs.berkeley.edu
