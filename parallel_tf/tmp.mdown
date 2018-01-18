@@ -1,0 +1,17 @@
+# Parallel Tensorflow
+
+## Forewords
+
+Tensorflow is using a synchronization implementation which focuses more on stability and efficiency, and as a result becomes less controlable. This guide is intended as a in-depth guide on synchronized/asynchronized/custom synchronization for Tensorflow networks. The target audience is students and researchers who need to set up a fine-grained, controlled distributed Tensorflow environment. 
+
+## Motivation
+
+Parallel training are gaining increasing interests in deep learning field. Models are increasing their complexity, while the Moore's law has stopped and makes training time a bottleneck. As a natural solution, scaling comes into play in both industry and academia. In this article we talk about horizontal scaling, which enables training in a distributed settings. In detail, it talks about the implementation of two popular approach currently in the field with Tensorflow: Synchronous SGD, Asynchronous SGD, and explores a new hybrid training approach.
+
+## Example 1: Synchronous SGD
+
+First we talks about the points with regard to synchronous SGD. (Formula below)
+
+![Alt text](./sgd.png?raw=true)
+
+A synchronous approach for a distributed stochastic gradient descent algorithm was presented in 2012. The parameter are stored on multiple servers, and multiple workers processes one mini-batch of data in parallel, calculating the gradients of the network through back-prop, and sends the gradients back to the parameter server, where they are averaged and applied.

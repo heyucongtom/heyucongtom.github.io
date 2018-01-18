@@ -5,5 +5,6 @@ from . import views
 app_name = 'main_index'
 urlpatterns = [
 	url(r'^$', views.index, name='index'),
-	path('accounts/', include('django.contrib.auth.urls'))
+	path('accounts/', include('django.contrib.auth.urls')),
+	path('signup/', views.signup, name='signup')
 ]

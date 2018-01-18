@@ -1,12 +1,15 @@
 {% load static %}
 <body>
-This is bca current songs
+<h2>This is bca current songs</h2>
 <br>
+
+<h3> Admin required: <a href="{% url 'songs:new' %}">**Add Song**</a>
+</h3>
 
 {% for s in object_list %}
 	<ul>
 		<ul> 
-		    <li> Song name: {{ s.song_name }} <br>
+		    <li><a href="{{ s.song_pdf.url }}">{{ s.song_name }}<br>
 		    <a href="{% url 'songs:edit' s.id %}">  **EDIT**  </a>	||----||
 		   	<a href="{% url 'songs:delete' s.id %}">  **DELETE**  </a></li>
 		    <li> Other attributes.. (e.g: Author)</li>
