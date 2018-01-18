@@ -1,13 +1,20 @@
 # Parallel Tensorflow
 
-This guide is intended as a in-depth guide on synchronized/asynchronized/custom synchronization for Tensorflow networks. The target audience is students and researchers who need to set up a fine-grained, controlled distributed Tensorflow environment. 
+## Forewords
 
-The motivation for this article is that Tensorflow is using a synchronization implementation which focuses more on stability and efficiency, and as a result becomes less controlable. 
+Tensorflow is using a synchronization implementation which focuses more on stability and efficiency, and as a result becomes less controlable. This guide is intended as a in-depth guide on synchronized/asynchronized/custom synchronization for Tensorflow networks. The target audience is students and researchers who need to set up a fine-grained, controlled distributed Tensorflow environment. 
+
+## Motivation
+
+Parallel training are gaining increasing interests in deep learning field. Models are increasing their complexity, while the Moore's law has stopped and makes training time a bottleneck. As a natural solution, scaling comes into play in both industry and academia. In this article we talk about horizontal scaling, which enables training in a distributed settings. In detail, it talks about the implementation of two popular approach currently in the field with Tensorflow: Synchronous SGD, Asynchronous SGD, and explores a new hybrid training approach.
 
 ## Example 1: Synchronous SGD
 
-We start our discussion on synchronous training. Ideally, the synchronized sgd seeks to compute the sgd (Figure 1) via data parallelism. 
-![Alt text](./sgd.png?raw=true "Figure 1")
+First we talks about the points with regard to synchronous SGD. (Formula below)
+
+![Alt text](./sgd.png?raw=true)
+
+A synchronized approach for a distributed stochastic gradient descent algorithm was presented in 2012. The parameter are stored on multiple servers, and multiple workers processes one mini-batch of data in parallel, calculating the gradients of the network through back-prop, and sends the gradients back to the parameter server, where they are averaged and applied.
 
 Since it only distributes the data and averaging them for every batch of data, we expect to get exactly the same result for any number of workers, which looks like:
 ![Alt text](./sync_mnist.png?raw=true "Figure 1")
