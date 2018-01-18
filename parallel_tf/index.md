@@ -20,16 +20,16 @@ Since it only distributes the data and averaging them for every batch of data, w
 ![Alt text](./sync_mnist.png?raw=true "Figure 2")
 ![Alt text](./sync_cifar10_naive_cnn.png?raw=true "Figure 3")
 
-The official guide is vague on such setups and usages. In most of the settings, we could get somehow synchronized training, but we couldn't get the same results for arbitrary workers - or even worse, the results is non-repeatable even if we are running the same code and fixing the same random seed. Such characteristics are caused by the distributed protocol of Tensorflow, and in this tutorial we will try to build a controlled environment, such that our result will be fully repeatable and equivalent.
+The official guide is vague on such setups and usages. In most of the settings, we could get somehow synchronized training, but we could not get the same results for arbitrary workers - or even worse, the results is non-repeatable even if we are running the same code and fixing the same random seed. Such characteristics are caused by the distributed protocol of Tensorflow, and in this tutorial we will try to build a controlled environment, such that our result will be fully repeatable and equivalent.
 
-In the following excerpt of codes, I emphasizes how we implement the key points which controls the behavior of our distributed training session. (Different from the official guide I didn't use the make_session_run_hook. As in some [issues](https://github.com/tensorflow/tensorflow/issues/7970) described, there are some race conditions associated with it.) The hook is just a groups of ops that are needed in order to start the queues in SyncReplicaOptimizer. I recommend reading the source at Tensorflow's Github page for advanced information.
+In the following excerpt of codes, I emphasizes how we implement the key points which controls the behavior of our distributed training session. (Different from the official guide I did not use the make_session_run_hook. As in some [issues](https://github.com/tensorflow/tensorflow/issues/7970) described, there are some race conditions associated with it.) The hook is just a groups of ops that are needed in order to start the queues in SyncReplicaOptimizer. I recommend reading the source at Tensorflow's Github page for advanced information.
 
 In short, we need to pay attention to following points:
 
 0. Fix random seed before we import data.
 1. Set up local init ops and recovery_wait_secs.
 2. Chief needs to run those ops.
-3. Don't shuffle data. (Different processes would mess up.)
+3. Do not shuffle data. (Different processes would mess up.)
 4. Make sure you assign exactly same effective data for all the workers. e.g (100 * 1 = 50 * 2 = 25 * 4, for {1, 2, 4} workers accourdingly)
 5. Set up a barrier to make sure that all workers are on the same batch. 
 
@@ -88,7 +88,7 @@ def worker_train_func(job_name, task_index):
     # Create a "supervisor", which oversees the training process.
 
     ## IMPORTANT: recovery_wait_eecs=0.
-    #  TF distributed protocol doesn't guarantee 
+    #  TF distributed protocol does not guarantee 
     sv = tf.train.Supervisor(is_chief=is_chief,
                              logdir="./tmp/train_logs",
                              init_op=init_op,
@@ -163,9 +163,11 @@ def worker_train_func(job_name, task_index):
 
 ```
 
-## Example 2: Asynchornized SGD.
+## Example 2: Asynchornous SGD.
 
-Async SGD is relatively easier to implement than sync sgd. It is faster too since we don't have to wait for all nodes to response. Usually it also demonstrates faster convergence than sync-SGD. However, since it goes to different gradient direction simultaneously, it usually fails to reach optimal results as synchronized version does, falling short of 1~2% of training accuracy on some network.
+Different from the synchronous SGD approach, workers in asynchornous SGD fetches from the parameters servers the most up-to-date parameters, compute gradients individually, and apply their gradients independently, instead of waiting for everyone and averaging out. 
+
+Since each worker communicates independently with the parameter server, async SGD is relatively easier to implement than synchronous SGD. It is faster too since we do not have to wait for all nodes to response. In our experiments it also demonstrates faster convergence than synchronous SGD. However, since it goes to different gradient direction simultaneously, it usually fails to reach optimal results as synchronized version does on some networks (e.g our results in cifar-10), falling short of 1~2% of training accuracy on some network.
 
 (Examplify: async training failed to converge to the performance level of sync training.)
 
@@ -175,7 +177,7 @@ However, on networks with relatively simpler structure (which sometimes means th
 
 ![Alt text](./async_sync_group_conv.png?raw=true "Title")
 
-Different from the synchronized setting, now we don't need to ensure simultaneous&sync updates for each batch. Refer to the code snippet before, we could remove the SyncReplicaOptimizer and then we get the asynchronous training model.
+Different from the synchronized setting, now we do not need to ensure simultaneous&sync updates for each batch. Refer to the code snippet before, we could remove the SyncReplicaOptimizer and then we get the asynchronous training model.
 
 ## Example 3: Process Group Training.
 An attempt we made is mixing sync and async training model at the same time. According to a recent [paper](https://arxiv.org/abs/1708.05256) that Intel has published, the hybrid model would gain performance boost which is attributed from sync training, and speed boost which is attributed from async training.
