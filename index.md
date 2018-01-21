@@ -7,5 +7,7 @@ As per this year(2018 Spring) I was taking Compiler(CS164), Security(CS161), Alg
 
 Some relevant works are being uploaded. Please refer to the documents below.
 
+(*CS267* This doc below coule be used as HW0 for CS267. It talks about solving parallel training problems on Tensorflow, targeted distributed settings. It talks about bottleneck, scaling, and more.)
+
 [Tensorflow Sync/Async/Custom Network Training Guide](./parallel_tf/index.md)
 
